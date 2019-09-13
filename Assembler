@@ -1,0 +1,200 @@
+#include <stdio.h>    /* standard input/output library */
+#include <stdlib.h>    /* Standard C Library */
+#include <string.h>    /* String operations library */
+#include <ctype.h>    /* Library for useful character operations */
+#include <limits.h>    /* Library for definitions of common variable type characteristics */
+#include "functions.h"
+/*Cedrik Ho
+ * ch45935
+ *
+ */
+
+#define MAX_OPCODE_SIZE 31
+
+int table_size = 0;//initialize symbol table size.
+int startP_point = 0;//ORIG. will be zero until we read symbol table
+
+
+char *codes[MAX_OPCODE_SIZE] = {
+        "add",
+        "and",
+        "br",
+        "brp",
+        "brz",
+        "brzp",
+        "brn",
+        "brnp",
+        "brnz",
+        "brnzp",
+        "halt",
+        "jmp",
+        "jsr",
+        "jsrr",
+        "ldb",
+        "ldw",
+        "lea",
+        "nop",
+        "not",
+        "ret",
+        "lshf",
+        "rshfl",
+        "rshfa",
+        "rti",
+        "stb",
+        "stw",
+        "trap",
+        "xor",
+        ".orig",
+        ".end",
+        ".fill"
+};
+char *restrictedcodes[36] = {
+        "add",
+        "and",
+        "br",
+        "brp",
+        "brz",
+        "brzp",
+        "brn",
+        "brnp",
+        "brnz",
+        "brnzp",
+        "halt",
+        "jmp",
+        "jsr",
+        "jsrr",
+        "ldb",
+        "ldw",
+        "lea",
+        "nop",
+        "not",
+        "ret",
+        "lshf",
+        "rshfl",
+        "rshfa",
+        "rti",
+        "stb",
+        "stw",
+        "trap",
+        "xor",
+        ".orig",
+        ".end",
+        ".fill",
+        "getc",
+        "in",
+        "out",
+        "puts",
+};
+#define MAX_SYMBOLS 255
+#define  MAX_LABEL_SIZE 20
+
+typedef struct EntryIntoSymbolTable {
+    int address;
+    char label_name[MAX_LABEL_SIZE + 1];//Size n-1 don't forget +1 for null termination
+} symbolEntry;
+
+//Create object of type symbolEntry ie: Creating Table with max allotment
+symbolEntry symbolTable[MAX_SYMBOLS];//Table can't be larger than (2^8)-1
+
+
+/*
+ * FUNCTIONS FOR VALIDATING LABELS
+ *
+ */
+int searchLabelsForRestricted(char *label) {//Helper Function for isValidLabel
+    //Function compare all labels to the restricted opcodes and pseduo-op list
+    for (int i = 0; i < 36; i++) {
+        //  printf("\n%s",restrictedcodes[i]);//For testing
+        if (strcasecmp(label, restrictedcodes[i]) == 0) {
+            printf("\nfailed uses one of the op-codes or pseudo ops");
+            return 0;
+        }
+
+    }
+    printf("\npassed opcode and pseudo op restrictions");
+    return 1;
+}
+
+
+int isalphanumeric(char *label) {
+    for (int i = 0; i < (MAX_LABEL_SIZE + 1); i++) {
+        //Test edge case at size 20
+        if (label[i] == '\0') {
+            printf("\nPassed alphanumber");
+            return 1;
+        }
+        if (isalnum(label[i]) == 0) {//Zero means failed
+            printf("\n Failed alphanumeric check");
+            return 0;
+        }
+    }
+    printf("\nPassed alphanumber");
+    return 1;
+}
+
+int isValidlabel(char *label) {
+    printf("\n%s", label);//For Testings
+    /*  Valid labels consist of one to twenty alphanumeric characters
+      (i.e., a letter of the alphabet, or a decimal digit), starting with a letter of the alphabet.
+      A valid label cannot be the same as an opcode or a pseudo-op.
+      A valid label must start with a letter other than ‘x’ and consist solely of alphanumeric characters – a to z, 0 to 9. The label is optional,
+      i.e., an assembly language instruction can leave out the label. A valid label cannot be IN, PUTS, GETC, or PUTS.
+      The entire assembly process, including labels, is case-insensitive.
+      */
+    char *temp_label = &label[0];
+    if (isalphanumeric(label) == 1 && temp_label[0] != 'x' && temp_label[0] != 'X' &&
+        searchLabelsForRestricted(label) == 1 && (isalpha(temp_label[0]) != 0) && (strlen(label) <= (MAX_LABEL_SIZE))) {
+        printf("\n%d", strlen(label));//For Testing
+        printf("\nPASSED ALL RESTRICTIONS");
+        return 1;
+    }
+
+
+    //printf("\n%d",strlen(label));//For Testing
+    if (strlen(label) > (MAX_LABEL_SIZE)) {
+        printf("\nTOO BIG of Label");
+        printf("\n%d", strlen(label));//For Testing
+        return -1;
+    }
+
+    if (temp_label[0] == 'x' || temp_label[0] == 'X') {
+        printf("\n ERROR Can't have X or x as first letter in Label");
+        return -1;
+    }
+    if (isalpha(temp_label[0]) == 0) {
+        printf("\n ERROR First letter of label not part of alphabet\n");
+        return -1;
+    }
+    return 0;
+}
+/*
+ * END FUNCTIONS FOR VALIDATING LABELS
+ *
+ */
+
+
+//Adds to symbol Table. Return 0 if sucessfull and -1 if didn't add to table
+int insertIntoSymbolTable(char *label, int address) {
+///Remeber 256 symbols is actually 0 element plus 255
+    if (table_size > MAX_SYMBOLS) {
+        printf("Can't add to symbol table it is full with 256 Symbols");
+        return -1;
+    }
+    if (isValidlabel(label) != 1) {
+        printf("\nLabel is not Valid!\n");
+        return -1;// Will need to return more specific error messages later on for specific errors.
+    }
+    symbolTable[table_size].address = address;
+    strcpy(symbolTable[table_size].label_name, label);
+    table_size += 1;//have to account for size = n-1
+    return 0;
+}
+
+//Note we need to create function that test the memory address validity right now any integer works but
+//Ideally we need to restrict to only user addressable area of mem.
+int main(){
+    insertIntoSymbolTable("labelTest123",123);
+    insertIntoSymbolTable("XShouldfaile"12345568)
+    return 0;
+}
+
