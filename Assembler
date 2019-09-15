@@ -4,15 +4,24 @@
 #include <ctype.h>    /* Library for useful character operations */
 #include <limits.h>    /* Library for definitions of common variable type characteristics */
 #include "functions.h"
+#include <strings.h>
 /*Cedrik Ho
  * ch45935
  *
  */
 
-#define MAX_OPCODE_SIZE 31
 
+
+
+
+
+#define MAX_OPCODE_SIZE 31
+#define MAX_SYMBOLS 255
+#define  MAX_LABEL_SIZE 20
 int table_size = 0;//initialize symbol table size.
 int startP_point = 0;//ORIG. will be zero until we read symbol table
+
+
 
 
 char *codes[MAX_OPCODE_SIZE] = {
@@ -48,7 +57,7 @@ char *codes[MAX_OPCODE_SIZE] = {
         ".end",
         ".fill"
 };
-char *restrictedcodes[36] = {
+const char *restrictedcodes[36] = {
         "add",
         "and",
         "br",
@@ -85,8 +94,7 @@ char *restrictedcodes[36] = {
         "out",
         "puts",
 };
-#define MAX_SYMBOLS 255
-#define  MAX_LABEL_SIZE 20
+
 
 typedef struct EntryIntoSymbolTable {
     int address;
@@ -97,15 +105,40 @@ typedef struct EntryIntoSymbolTable {
 symbolEntry symbolTable[MAX_SYMBOLS];//Table can't be larger than (2^8)-1
 
 
-/*
- * FUNCTIONS FOR VALIDATING LABELS
- *
- */
+
+
+//Note we need to create function that test the memory address validity right now any integer works but
+//Ideally we need to restrict to only user addressable area of mem.
+int main(){
+  char labelname[]="labelTEST123";
+ insertIntoSymbolTable(labelname,123);
+    insertIntoSymbolTable("Acase+",12345568);
+
+    return 0;
+}
+
+int isalphanumeric(char label[]) {
+    for (int i = 0; i < (strlen(label)); i++) {
+        //Test edge case at size 20
+        printf("\n Enterning loop, %d",i);
+	printf("\n%s",label);
+printf("\n%c",label[i]);
+        if (isalnum(label[i]) == 0) {//Zero means failed
+            printf("\n Failed alphanumeric check");            return 0;
+        }
+    }
+    printf("\nPassed alphanumber");
+    return 1;
+}
 int searchLabelsForRestricted(char *label) {//Helper Function for isValidLabel
     //Function compare all labels to the restricted opcodes and pseduo-op list
-    for (int i = 0; i < 36; i++) {
+        label = strlwr(label);
+    printf("%s",label);
+    printf("got into search for restricted");
+    for (int i = 0; i < 35; i++) {//Size of restricted arary
         //  printf("\n%s",restrictedcodes[i]);//For testing
-        if (strcasecmp(label, restrictedcodes[i]) == 0) {
+        printf("%s",restrictedcodes[i]);
+        if (strcmp(label,restrictedcodes[i]) == 0) {
             printf("\nfailed uses one of the op-codes or pseudo ops");
             return 0;
         }
@@ -115,24 +148,8 @@ int searchLabelsForRestricted(char *label) {//Helper Function for isValidLabel
     return 1;
 }
 
+int isValidlabel(char label[]) {
 
-int isalphanumeric(char *label) {
-    for (int i = 0; i < (MAX_LABEL_SIZE + 1); i++) {
-        //Test edge case at size 20
-        if (label[i] == '\0') {
-            printf("\nPassed alphanumber");
-            return 1;
-        }
-        if (isalnum(label[i]) == 0) {//Zero means failed
-            printf("\n Failed alphanumeric check");
-            return 0;
-        }
-    }
-    printf("\nPassed alphanumber");
-    return 1;
-}
-
-int isValidlabel(char *label) {
     printf("\n%s", label);//For Testings
     /*  Valid labels consist of one to twenty alphanumeric characters
       (i.e., a letter of the alphabet, or a decimal digit), starting with a letter of the alphabet.
@@ -141,9 +158,10 @@ int isValidlabel(char *label) {
       i.e., an assembly language instruction can leave out the label. A valid label cannot be IN, PUTS, GETC, or PUTS.
       The entire assembly process, including labels, is case-insensitive.
       */
-    char *temp_label = &label[0];
-    if (isalphanumeric(label) == 1 && temp_label[0] != 'x' && temp_label[0] != 'X' &&
-        searchLabelsForRestricted(label) == 1 && (isalpha(temp_label[0]) != 0) && (strlen(label) <= (MAX_LABEL_SIZE))) {
+    
+	printf("fortesting");
+    if ( isalphanumeric(label) == 1 && label[0] != 'x' && label[0] != 'X' &&
+        searchLabelsForRestricted(label) == 1 && (isalpha(label[0]) != 0) && (strlen(label) <= (MAX_LABEL_SIZE))) {
         printf("\n%d", strlen(label));//For Testing
         printf("\nPASSED ALL RESTRICTIONS");
         return 1;
@@ -157,11 +175,11 @@ int isValidlabel(char *label) {
         return -1;
     }
 
-    if (temp_label[0] == 'x' || temp_label[0] == 'X') {
+    if (label[0] == 'x' || label[0] == 'X') {
         printf("\n ERROR Can't have X or x as first letter in Label");
         return -1;
     }
-    if (isalpha(temp_label[0]) == 0) {
+    if (isalpha(label[0]) == 0) {
         printf("\n ERROR First letter of label not part of alphabet\n");
         return -1;
     }
@@ -174,7 +192,7 @@ int isValidlabel(char *label) {
 
 
 //Adds to symbol Table. Return 0 if sucessfull and -1 if didn't add to table
-int insertIntoSymbolTable(char *label, int address) {
+int insertIntoSymbolTable(char label[], int address) {
 ///Remeber 256 symbols is actually 0 element plus 255
     if (table_size > MAX_SYMBOLS) {
         printf("Can't add to symbol table it is full with 256 Symbols");
@@ -184,17 +202,23 @@ int insertIntoSymbolTable(char *label, int address) {
         printf("\nLabel is not Valid!\n");
         return -1;// Will need to return more specific error messages later on for specific errors.
     }
+    printf("\nPutting Symbol into table\n");
     symbolTable[table_size].address = address;
     strcpy(symbolTable[table_size].label_name, label);
     table_size += 1;//have to account for size = n-1
     return 0;
 }
 
-//Note we need to create function that test the memory address validity right now any integer works but
-//Ideally we need to restrict to only user addressable area of mem.
-int main(){
-    insertIntoSymbolTable("labelTest123",123);
-    insertIntoSymbolTable("XShouldfaile"12345568)
-    return 0;
+char *strlwr(char *str)
+{
+    unsigned char *p = (unsigned char *)str;
+
+    while (*p) {
+        *p = tolower((unsigned char)*p);
+        p++;
+    }
+
+    return str;
 }
+
 
