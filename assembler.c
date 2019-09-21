@@ -23,12 +23,12 @@ char *opcodes[26] = {
     "halt",
     "jmp",
     "jsr",
-    "jsrr"
+    "jsrr",
     "ldb",
     "ldw",
     "lea",
     "nop",
-    "not"
+    "not",
     "ret",
     "lshf",
     "rshfl",
@@ -41,7 +41,7 @@ char *opcodes[26] = {
 
 int isOpcode(char *check) {
     for(int i = 0; i < 26; i++) {
-        if(strcmp(check, opcodes[i])) {
+        if(strcmp(check, opcodes[i]) == 0) {
             return 1;    
         }
     }
@@ -129,11 +129,12 @@ int readAndParse(FILE * pInfile, char * pLine, char ** pLabel, char ** pOpcode,
     if(!(lPtr = strtok(pLine, "\t\n , ")))
         return (EMPTY_LINE);
 
-    if(isOpcode(lPtr) == -1 && lPtr[0] != '.') {
+    if(isOpcode(lPtr) == 0 && lPtr[0] != '.') {
         *pLabel = lPtr;
+        
         if(!(lPtr = strtok(NULL, "\t\n ,"))) return (OK);
     }
-
+    
     *pOpcode = lPtr;
 
     if(!(lPtr = strtok(NULL, "\t\n ,"))) return (OK);
@@ -192,7 +193,7 @@ int main(int argc, char* argv[]) {
                                 &lArg2, &lArg3, &lArg4);
         if(lRet != DONE && lRet != EMPTY_LINE)
         {
-            printf("%s, %s, %s, %s, %s, %s\n", lLabel, lOpcode, lArg1,
+            printf("%s, %s, %s, %s, %s, %s. \n", lLabel, lOpcode, lArg1,
                                         lArg2, lArg3, lArg4);
         }
     }while(lRet != DONE);   
